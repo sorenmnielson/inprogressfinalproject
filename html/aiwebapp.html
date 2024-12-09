@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pong Game</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #111;
+      color: white;
+      text-align: center;
+    }
+    canvas {
+      border: 2px solid #fff;
+      background-color: #000;
+      margin-top: 10px;
+    }
+    #restart {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      color: #111;
+      background-color: white;
+      border: none;
+      cursor: pointer;
+    }
+    #restart:active {
+      background-color: #ccc;
+    }
+    #instructions {
+      max-width: 600px;
+      margin: 10px 0;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <h1>Pong Game</h1>
+  <div id="instructions">
+    <p><strong>How to Play:</strong> Use your mouse to move the paddle on the left side of the screen. The paddle follows your mouse movements. Your goal is to prevent the ball from passing your paddle and to try to get the ball past the computer's paddle on the right side.</p>
+    <p><strong>How to Win:</strong> The first player to reach 5 points wins the game! You earn a point when the ball gets past the computer's paddle. Be careful—if the ball passes your paddle, the computer earns a point.</p>
+    <p>When the game ends, click the "Restart" button to play again!</p>
+  </div>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+  <button id="restart" style="display: none;">Restart</button>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const restartButton = document.getElementById("restart");
+
+    const paddleWidth = 10;
+    const paddleHeight = 100;
+    const ballSize = 10;
+    const winningScore = 5;
+
+    let playerY, computerY, ballX, ballY, ballSpeedX, ballSpeedY, isGameOver, playerScore, computerScore;
+
+    function resetGame() {
+      playerY = canvas.height / 2 - paddleHeight / 2;
+      computerY = canvas.height / 2 - paddleHeight / 2;
+      ballX = canvas.width / 2;
+      ballY = canvas.height / 2;
+      ballSpeedX = 5;
+      ballSpeedY = 5;
+      isGameOver = false;
+      playerScore = 0;
+      computerScore = 0;
+      restartButton.style.display = "none";
+    }
+
+    function drawPaddle(x, y) {
+      ctx.fillStyle = "white";
+      ctx.fillRect(x, y, paddleWidth, paddleHeight);
+    }
+
+    function drawBall() {
+      ctx.fillStyle = "white";
+      ctx.beginPath();
+      ctx.arc(ballX, ballY, ballSize, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function drawScores() {
+      ctx.fillStyle = "white";
+      ctx.font = "20px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(`Player: ${playerScore}`, canvas.width / 4, 30);
+      ctx.fillText(`Computer: ${computerScore}`, (canvas.width / 4) * 3, 30);
+    }
+
+    function moveComputerPaddle() {
+      if (computerY + paddleHeight / 2 < ballY) {
+        computerY += 2; // Slower speed for the computer paddle
+      } else if (computerY + paddleHeight / 2 > ballY) {
+        computerY -= 2; // Slower speed for the computer paddle
+      }
+    }
+
+    function detectCollision() {
+      // Player paddle collision
+      if (
+        ballX - ballSize <= paddleWidth &&
+        ballY >= playerY &&
+        ballY <= playerY + paddleHeight
+      ) {
+        ballSpeedX = -ballSpeedX;
+      }
+
+      // Computer paddle collision
+      if (
+        ballX + ballSize >= canvas.width - paddleWidth &&
+        ballY >= computerY &&
+        ballY <= computerY + paddleHeight
+      ) {
+        ballSpeedX = -ballSpeedX;
+      }
+
+      // Top and bottom wall collision
+      if (ballY - ballSize <= 0 || ballY + ballSize >= canvas.height) {
+        ballSpeedY = -ballSpeedY;
+      }
+    }
+
+    function checkGameOver() {
+      // Ball goes past player
+      if (ballX - ballSize <= 0) {
+        computerScore++;
+        resetBall();
+      }
+
+      // Ball goes past computer
+      if (ballX + ballSize >= canvas.width) {
+        playerScore++;
+        resetBall();
+      }
+
+      if (playerScore >= winningScore || computerScore >= winningScore) {
+        isGameOver = true;
+        restartButton.style.display = "block";
+      }
+    }
+
+    function resetBall() {
+      ballX = canvas.width / 2;
+      ballY = canvas.height / 2;
+      ballSpeedX = 5 * (Math.random() > 0.5 ? 1 : -1);
+      ballSpeedY = 5 * (Math.random() > 0.5 ? 1 : -1);
+    }
+
+    function updateGame() {
+      if (!isGameOver) {
+        ballX += ballSpeedX;
+        ballY += ballSpeedY;
+        detectCollision();
+        moveComputerPaddle();
+        checkGameOver();
+      }
+    }
+
+    function drawGame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw paddles, ball, and scores
+      drawPaddle(0, playerY);
+      drawPaddle(canvas.width - paddleWidth, computerY);
+      drawBall();
+      drawScores();
+
+      // Show winning message if needed
+      if (isGameOver) {
+        ctx.fillStyle = "white";
+        ctx.font = "24px Arial";
+        ctx.textAlign = "center";
+        const winner = playerScore >= winningScore ? "Player" : "Computer";
+        ctx.fillText(`${winner} Wins! Press Restart to Play Again`, canvas.width / 2, canvas.height / 2);
+      }
+    }
+
+    function gameLoop() {
+      updateGame();
+      drawGame();
+      requestAnimationFrame(gameLoop);
+    }
+
+    document.addEventListener("mousemove", (event) => {
+      const canvasRect = canvas.getBoundingClientRect();
+      playerY = event.clientY - canvasRect.top - paddleHeight / 2;
+      if (playerY < 0) playerY = 0;
+      if (playerY + paddleHeight > canvas.height) playerY = canvas.height - paddleHeight;
+    });
+
+    restartButton.addEventListener("click", resetGame);
+
+    resetGame();
+    gameLoop();
+  </script>
+</body>
+</html>
